@@ -1264,6 +1264,11 @@ input[type=range]::-webkit-slider-thumb {
       <span class="bpm-label" style="text-align:right">200</span>
     </div>
 
+    <div class="run-controls" style="margin-top:10px;margin-bottom:16px">
+      <button class="btn btn-primary" id="runPlayBtn" onclick="runToggle()" style="flex:1">Start</button>
+      <button class="btn btn-ghost" onclick="runTimerReset()" style="flex:0 0 auto;padding:11px 18px">Reset</button>
+    </div>
+
     <div class="row-label" style="margin-top:8px">Pace → Cadence Calculator</div>
     <div class="run-pace-row">
       <span class="run-pace-label">Pace</span>
@@ -1305,10 +1310,6 @@ input[type=range]::-webkit-slider-thumb {
     </div>
     <div class="run-gps-status" id="runGpsStatus">— GPS not active —</div>
 
-    <div class="run-controls" style="margin-top:10px">
-      <button class="btn btn-primary" id="runPlayBtn" onclick="runToggle()" style="flex:1">Start</button>
-      <button class="btn btn-ghost" onclick="runTimerReset()" style="flex:0 0 auto;padding:11px 18px">Reset</button>
-    </div>
   </div>
 
   </div><!-- end panelRun -->
@@ -2571,9 +2572,8 @@ function playRunBell(accent) {
 
 // 12 sound functions in order
 const RUN_SOUNDS = [
-  playRunKick, playRunHihat, playRunWood, playRunSnap,
-  playRunRim, playRunCowbell, playRunShaker, playRunClap,
-  playRunTom, playRunClave, playRunConga, playRunTriangle
+  playRunKick, playRunWood, playRunRim,
+  playRunClap, playRunTom, playRunClave, playRunConga
 ];
 
 
@@ -2859,10 +2859,13 @@ document.addEventListener('pointerdown', () => _preloadSamples(), { once: true }
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   if (isIOS) {
     document.getElementById('muteBanner').classList.add('visible');
-    // Hide after first successful audio interaction
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      document.getElementById('muteBanner').classList.remove('visible');
+    }, 5000);
+    // Also hide immediately after first successful audio interaction
     document.addEventListener('touchstart', function dismiss() {
       getAudioCtx();
-      // small silent buffer — if ctx runs, audio is working, hide banner
       setTimeout(() => {
         if (audioCtx && audioCtx.state === 'running') {
           document.getElementById('muteBanner').classList.remove('visible');
