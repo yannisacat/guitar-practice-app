@@ -1804,18 +1804,21 @@ function metroToggle() {
     const interval = Math.min((60 / bpm) * 1000, 700); // countdown at beat tempo, max 700ms
     let count = 3;
     btn.textContent = count;
+    gsap.fromTo(btn, {scale: 1.7, opacity: 0}, {scale: 1, opacity: 1, duration: 0.28, ease: 'back.out(2.5)'});
     playCountdownSample();
     const cd = setInterval(() => {
       if (!_metroCountingDown) { clearInterval(cd); return; }
       count--;
       if (count > 0) {
         btn.textContent = count;
+        gsap.fromTo(btn, {scale: 1.7, opacity: 0}, {scale: 1, opacity: 1, duration: 0.28, ease: 'back.out(2.5)'});
         playCountdownSample();
       } else {
         clearInterval(cd);
         _metroCountingDown = false;
         btn.classList.remove('counting');
         btn.textContent = 'Stop';
+        gsap.fromTo(btn, {scale: 0.85, opacity: 0.6}, {scale: 1, opacity: 1, duration: 0.2, ease: 'power2.out'});
         metroRunning = true;
         startMetro();
       }
