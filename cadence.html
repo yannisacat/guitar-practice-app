@@ -339,42 +339,45 @@ input[type=range]::-webkit-slider-thumb {
   margin-bottom: 6px;
 }
 
-/* ── TIME SIG WHEEL ── */
-.ts-wheel-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-  user-select: none;
+/* ── TIME SIG PICKER ── */
+.ts-pick-btn {
+  width: 100%; display: flex; align-items: center; justify-content: center;
+  gap: 10px; padding: 12px 20px; margin-bottom: 20px;
+  background: var(--b1); border: 1px solid var(--s2); border-radius: 4px;
+  cursor: pointer; font-family: inherit; user-select: none;
+  transition: border-color .15s;
 }
-.ts-wheel-btn {
-  width: 28px; height: 28px;
-  background: var(--s2);
-  border: 1px solid var(--b1);
-  color: var(--t2);
-  font-size: 1rem; line-height: 1;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  transition: color .1s, border-color .1s;
+.ts-pick-btn:hover { border-color: var(--t3); }
+.ts-pick-main { font-size: 1.5rem; font-weight: 100; color: var(--white); letter-spacing: 0.04em; }
+.ts-pick-sub  { font-size: 0.52rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--t3); }
+.ts-pick-arrow { font-size: 0.7rem; color: var(--t2); margin-left: 4px; }
+.ts-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 200;
 }
-.ts-wheel-btn:hover { color: var(--white); border-color: var(--t3); }
-.ts-wheel-display {
-  flex: 1;
-  text-align: center;
-  font-size: 1.5rem;
-  font-weight: 100;
-  color: var(--white);
-  letter-spacing: 0.04em;
-  line-height: 1;
+.ts-panel {
+  display: none; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: min(480px,100vw); background: var(--b1); z-index: 201;
+  padding: 20px 16px 32px; border-radius: 14px 14px 0 0;
 }
-.ts-wheel-sub {
-  font-size: 0.52rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--t3);
-  margin-top: 3px;
+.ts-panel-title {
+  font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--t2); text-align: center; margin-bottom: 14px;
 }
+.ts-grid {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 8px;
+}
+.ts-grid-item {
+  padding: 14px 4px; background: var(--b0); border: 1px solid transparent;
+  border-radius: 6px; cursor: pointer; font-family: inherit;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transition: border-color .1s;
+}
+.ts-grid-item:hover { border-color: var(--t3); }
+.ts-grid-item.active { background: var(--white); }
+.ts-gi-label { font-size: 1rem; font-weight: 700; color: var(--white); line-height: 1; }
+.ts-grid-item.active .ts-gi-label { color: var(--b0); }
+.ts-gi-sub   { font-size: 0.6rem; color: var(--t2); }
+.ts-grid-item.active .ts-gi-sub { color: var(--b0); opacity: .6; }
 
 /* ── TUNER ── */
 .strings-grid {
@@ -1114,21 +1117,22 @@ input[type=range]::-webkit-slider-thumb {
 
     <div class="row-label">Sound</div>
     <div class="chip-row" style="margin-bottom:16px">
-      <button class="chip active" id="snd0" onclick="setSound(0)">Wood</button>
-      <button class="chip"        id="snd1" onclick="setSound(1)">Beep</button>
-      <button class="chip"        id="snd2" onclick="setSound(2)">Hi-Hat</button>
-      <button class="chip"        id="snd3" onclick="setSound(3)">Cowbell</button>
-      <button class="chip"        id="snd4" onclick="setSound(4)">Rim</button>
+      <button class="chip active" id="snd0" onclick="setSound(0)">1</button>
+      <button class="chip"        id="snd1" onclick="setSound(1)">2</button>
+      <button class="chip"        id="snd2" onclick="setSound(2)">3</button>
+      <button class="chip"        id="snd3" onclick="setSound(3)">4</button>
     </div>
 
     <div class="row-label">Time Signature</div>
-    <div class="ts-wheel-wrap">
-      <button class="ts-wheel-btn" onclick="stepTimeSig(-1)">&#8249;</button>
-      <div>
-        <div class="ts-wheel-display" id="tsDisplay">4/4</div>
-        <div class="ts-wheel-sub" id="tsSub">4 beats</div>
-      </div>
-      <button class="ts-wheel-btn" onclick="stepTimeSig(1)">&#8250;</button>
+    <button class="ts-pick-btn" id="tsPickBtn" onclick="openTsPicker()">
+      <span class="ts-pick-main" id="tsDisplay">4/4</span>
+      <span class="ts-pick-sub" id="tsSub">4 beats · ♩</span>
+      <span class="ts-pick-arrow">▾</span>
+    </button>
+    <div id="tsOverlay" class="ts-overlay" onclick="closeTsPicker()"></div>
+    <div id="tsPanel" class="ts-panel">
+      <div class="ts-panel-title">Select Time Signature</div>
+      <div id="tsGrid" class="ts-grid"></div>
     </div>
 
     <div class="bpm-creep-display" id="creepDisplay"></div>
@@ -1390,7 +1394,7 @@ function soundWoodBlock(accent) {
   const src = ctx.createBufferSource();
   const bpf = ctx.createBiquadFilter(); bpf.type='bandpass';
   bpf.frequency.value = accent ? 1000 : 650; bpf.Q.value = 2.5;
-  const gain = ctx.createGain(); gain.gain.value = accent ? 1.6 : 0.9;
+  const gain = ctx.createGain(); gain.gain.value = accent ? 1.6 : 1.5;
   src.buffer = buf; src.connect(bpf); bpf.connect(gain); gain.connect(ctx.destination);
   src.start();
 }
@@ -1400,7 +1404,7 @@ function soundBeep(accent) {
   const osc = ctx.createOscillator(); const gain = ctx.createGain();
   osc.connect(gain); gain.connect(ctx.destination);
   osc.type = 'square'; osc.frequency.value = accent ? 1400 : 900;
-  gain.gain.setValueAtTime(accent ? 0.52 : 0.30, ctx.currentTime);
+  gain.gain.setValueAtTime(accent ? 0.52 : 0.42, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.07);
   osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.09);
 }
@@ -1413,7 +1417,7 @@ function soundHiHat(accent) {
   for (let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len, accent?2.5:7);
   const src = ctx.createBufferSource();
   const hpf = ctx.createBiquadFilter(); hpf.type='highpass'; hpf.frequency.value=7000;
-  const gain = ctx.createGain(); gain.gain.value = accent ? 1.4 : 0.7;
+  const gain = ctx.createGain(); gain.gain.value = accent ? 1.4 : 1.1;
   src.buffer=buf; src.connect(hpf); hpf.connect(gain); gain.connect(ctx.destination);
   src.start();
 }
@@ -1425,7 +1429,7 @@ function soundCowbell(accent) {
     const osc=ctx.createOscillator(); const gain=ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
     osc.type='square'; osc.frequency.value=f;
-    gain.gain.setValueAtTime(accent?0.58:0.32, ctx.currentTime);
+    gain.gain.setValueAtTime(accent?0.58:0.46, ctx.currentTime);
     gain.gain.setTargetAtTime(0.0001, ctx.currentTime+0.01, dur*0.28);
     osc.start(ctx.currentTime); osc.stop(ctx.currentTime+dur);
   });
@@ -1439,13 +1443,13 @@ function soundRim(accent) {
   for (let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,10);
   const src=ctx.createBufferSource(); const bpf=ctx.createBiquadFilter();
   bpf.type='bandpass'; bpf.frequency.value=2400; bpf.Q.value=1;
-  const gain=ctx.createGain(); gain.gain.value=accent?1.8:1.0;
+  const gain=ctx.createGain(); gain.gain.value=accent?1.8:1.4;
   src.buffer=buf; src.connect(bpf); bpf.connect(gain); gain.connect(ctx.destination);
   src.start();
-  playTone(accent?840:560, 0.035, 'sine', accent?0.22:0.1);
+  playTone(accent?840:560, 0.035, 'sine', accent?0.22:0.17);
 }
 
-const SOUNDS = [soundWoodBlock, soundBeep, soundHiHat, soundCowbell, soundRim];
+const SOUNDS = [soundWoodBlock, soundBeep, soundHiHat, soundRim];
 let currentSound = 0;
 
 function setSound(idx) {
@@ -1453,11 +1457,10 @@ function setSound(idx) {
   document.querySelectorAll('[id^=snd]').forEach((b,i)=>b.classList.toggle('active',i===idx));
 }
 
-// accent level: 2=primary accent (red), 1=secondary accent (orange), 0=normal
+// accent level: 2=primary accent (red), 0=normal
 function playClick(level) {
-  if (level === 2) { playAccentSample(); }           // f.wav — primary accent
-  else if (level === 1) soundCowbell(false);         // secondary accent
-  else SOUNDS[currentSound](false);                  // normal beat
+  if (level === 2) { playAccentSample(); }  // f.wav — primary accent
+  else SOUNDS[currentSound](false);         // normal beat
 }
 
 function playPomoDone() {
@@ -1649,16 +1652,17 @@ updatePomoDisplay();
 // METRONOME
 // ══════════════════════════════════════════
 const TIME_SIGS = [
-  { label:'2/4', beats:2,  sub:'2 beats',   accents:[0],     accents2:[] },
-  { label:'3/4', beats:3,  sub:'3 beats',   accents:[0],     accents2:[] },
-  { label:'4/4', beats:4,  sub:'4 beats',   accents:[0],     accents2:[] },
-  { label:'4/7', beats:7,  sub:'4+3 beats', accents:[0],     accents2:[4] },
-  { label:'5/4', beats:5,  sub:'3+2 beats', accents:[0],     accents2:[3] },
-  { label:'5/8', beats:5,  sub:'2+3 beats', accents:[0],     accents2:[2] },
-  { label:'6/8', beats:6,  sub:'2×3 beats', accents:[0,3],   accents2:[] },
-  { label:'7/8', beats:7,  sub:'3+2+2',     accents:[0],     accents2:[3,5] },
-  { label:'9/8', beats:9,  sub:'3×3 beats', accents:[0,3,6], accents2:[] },
-  { label:'12/8',beats:12, sub:'4×3 beats', accents:[0,3,6,9],accents2:[] },
+  { label:'2/4',  beats:2,  denom:4 },
+  { label:'3/4',  beats:3,  denom:4 },
+  { label:'4/4',  beats:4,  denom:4 },
+  { label:'5/4',  beats:5,  denom:4 },
+  { label:'6/4',  beats:6,  denom:4 },
+  { label:'7/4',  beats:7,  denom:4 },
+  { label:'5/8',  beats:5,  denom:8 },
+  { label:'6/8',  beats:6,  denom:8 },
+  { label:'7/8',  beats:7,  denom:8 },
+  { label:'9/8',  beats:9,  denom:8 },
+  { label:'12/8', beats:12, denom:8 },
 ];
 let currentTimeSigIdx = 2;
 let bpm = 80;
@@ -1671,7 +1675,7 @@ function setTimeSig(idx) {
   currentTimeSigIdx = idx;
   const sig = TIME_SIGS[idx];
   document.getElementById('tsDisplay').textContent = sig.label;
-  document.getElementById('tsSub').textContent = sig.sub;
+  document.getElementById('tsSub').textContent = sig.beats + ' beats · ' + (sig.denom === 8 ? '♪' : '♩');
   metroBeat = 0;
   renderBeatDots();
   if (metroRunning) { stopMetro(); startMetro(); }
@@ -1681,15 +1685,38 @@ function stepTimeSig(delta) {
   setTimeSig((currentTimeSigIdx + delta + TIME_SIGS.length) % TIME_SIGS.length);
 }
 
+function openTsPicker() {
+  const grid = document.getElementById('tsGrid');
+  grid.innerHTML = '';
+  TIME_SIGS.forEach((sig, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'ts-grid-item' + (i === currentTimeSigIdx ? ' active' : '');
+    btn.innerHTML = `<span class="ts-gi-label">${sig.label}</span><span class="ts-gi-sub">${sig.denom===8?'♪':'♩'}</span>`;
+    btn.onclick = e => { e.stopPropagation(); setTimeSig(i); closeTsPicker(); };
+    grid.appendChild(btn);
+  });
+  const overlay = document.getElementById('tsOverlay');
+  const panel   = document.getElementById('tsPanel');
+  overlay.style.display = 'block';
+  panel.style.display   = 'block';
+  gsap.fromTo(panel, {y: 50, opacity: 0}, {y: 0, opacity: 1, duration: 0.22, ease: 'power2.out'});
+}
+
+function closeTsPicker() {
+  const panel = document.getElementById('tsPanel');
+  gsap.to(panel, {y: 30, opacity: 0, duration: 0.15, ease: 'power2.in', onComplete: () => {
+    panel.style.display = 'none';
+    document.getElementById('tsOverlay').style.display = 'none';
+  }});
+}
+
 function renderBeatDots() {
   const sig = TIME_SIGS[currentTimeSigIdx];
   const c = document.getElementById('beatVisual');
   c.innerHTML = '';
   for (let i=0;i<sig.beats;i++) {
     const dot = document.createElement('div');
-    const isAccent  = sig.accents.includes(i);
-    const isAccent2 = sig.accents2.includes(i);
-    dot.className = 'beat-dot' + (isAccent ? ' beat-accent' : isAccent2 ? ' beat-accent2' : '');
+    dot.className = 'beat-dot' + (i === 0 ? ' beat-accent' : '');
     dot.id = `bd${i}`;
     c.appendChild(dot);
   }
@@ -1763,13 +1790,13 @@ function startMetro() {
       if (creepOn) updateCreepDisplay();
     }
 
-    const level = sig.accents.includes(idx) ? 2 : sig.accents2.includes(idx) ? 1 : 0;
+    const level = idx === 0 ? 2 : 0;
     if (!muteTrainOn || Math.random() > MUTE_PROBABILITY) {
       playClick(level);
     }
 
     document.querySelectorAll('.beat-dot').forEach((d,i) => d.classList.toggle('active', i===idx));
-    const interval = (60 / bpm) * 1000;
+    const interval = (60 / bpm) * 1000 * (4 / sig.denom);
     setTimeout(() => document.querySelectorAll('.beat-dot').forEach(d => d.classList.remove('active')),
       Math.min(interval * 0.3, 110));
 
@@ -1801,7 +1828,7 @@ function metroToggle() {
     const btn = document.getElementById('metroBtnStart');
     btn.classList.add('counting');
     _preloadSamples();
-    const interval = Math.min((60 / bpm) * 1000, 700); // countdown at beat tempo, max 700ms
+    const interval = Math.min((60 / bpm) * 1000 * (4 / TIME_SIGS[currentTimeSigIdx].denom), 700); // countdown at beat tempo, max 700ms
     let count = 3;
     btn.textContent = count;
     gsap.fromTo(btn, {scale: 1.7, opacity: 0}, {scale: 1, opacity: 1, duration: 0.28, ease: 'back.out(2.5)'});
